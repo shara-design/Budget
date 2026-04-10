@@ -564,8 +564,8 @@
 <body>
 
 <div class="header">
-    <h1>💰 Mi Presupuesto Personal</h1>
-    <p id="headerSubtitle">Abril 2026 — Dashboard Interactivo</p>
+    <h1>Presupuesto Personal</h1>
+    <p id="headerSubtitle">Abril 2026</p>
 </div>
 
 <!-- Month Selector -->
@@ -1319,7 +1319,7 @@
     // ====== RENDER ALL ======
     const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
     function renderAll() {
-        document.getElementById('headerSubtitle').textContent = MONTH_NAMES[currentMonth] + ' 2026 — Dashboard Interactivo';
+        document.getElementById('headerSubtitle').textContent = MONTH_NAMES[currentMonth] + ' 2026';
         renderMonths();
         renderSummary();
         renderCharts();
