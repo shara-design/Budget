@@ -75,6 +75,18 @@
             color: white;
         }
 
+        .month-year {
+            margin-left: 12px;
+            border-color: var(--accent-light) !important;
+            color: var(--accent-light) !important;
+            font-weight: 600;
+        }
+
+        .month-year.active {
+            background: var(--accent-light) !important;
+            color: var(--bg) !important;
+        }
+
         /* Summary Cards */
         .summary-grid {
             display: grid;
@@ -773,37 +785,62 @@
     const MONTHS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
     let currentMonth = 3; // April (0-indexed)
 
-    const aprilExpenses = [
-        { name: 'Arriendo', category: 'Hogar', type: 'E', freq: 'Mensual', amount: 1050000 },
-        { name: 'Teléfono', category: 'Hogar', type: 'E', freq: 'Mensual', amount: 45000 },
-        { name: 'Internet hogar', category: 'Hogar', type: 'E', freq: 'Bimensual', amount: 18000 },
-        { name: 'Seguridad Social', category: 'Hogar', type: 'E', freq: 'Mensual', amount: 0 },
-        { name: 'Matrícula Isa', category: 'Educación', type: 'E', freq: 'Mensual', amount: 275000 },
-        { name: 'Tarjeta Nu', category: 'Créditos/Deudas', type: 'E', freq: 'Mensual', amount: 1160000 },
-        { name: 'Tarjeta Bancolombia', category: 'Créditos/Deudas', type: 'E', freq: 'Mensual', amount: 0 },
-        { name: 'Pasajes', category: 'Transporte', type: 'E', freq: 'Mensual', amount: 0 },
-        { name: 'Taxi/Uber', category: 'Transporte', type: 'NE', freq: 'Mensual', amount: 0 },
-        { name: 'Viajes', category: 'Entretenimiento', type: 'NE', freq: 'Semestral', amount: 600000 },
-        { name: 'Suscripciones', category: 'Entretenimiento', type: 'NE', freq: 'Mensual', amount: 12000 },
+    const expenseTemplate = [
+        { name: 'Arriendo', category: 'Hogar', type: 'E', freq: 'Mensual' },
+        { name: 'Teléfono', category: 'Hogar', type: 'E', freq: 'Mensual' },
+        { name: 'Internet hogar', category: 'Hogar', type: 'E', freq: 'Bimensual' },
+        { name: 'Seguridad Social', category: 'Hogar', type: 'E', freq: 'Mensual' },
+        { name: 'Matrícula Isa', category: 'Educación', type: 'E', freq: 'Mensual' },
+        { name: 'Tarjeta Nu', category: 'Créditos/Deudas', type: 'E', freq: 'Mensual' },
+        { name: 'Tarjeta Bancolombia', category: 'Créditos/Deudas', type: 'E', freq: 'Mensual' },
+        { name: 'Pasajes', category: 'Transporte', type: 'E', freq: 'Mensual' },
+        { name: 'Taxi/Uber', category: 'Transporte', type: 'NE', freq: 'Mensual' },
+        { name: 'Viajes', category: 'Entretenimiento', type: 'NE', freq: 'Semestral' },
+        { name: 'Suscripciones', category: 'Entretenimiento', type: 'NE', freq: 'Mensual' },
     ];
 
-    function emptyMonth() {
+    const aprilAmounts = {
+        'Arriendo': 1050000,
+        'Teléfono': 45000,
+        'Internet hogar': 18000,
+        'Matrícula Isa': 275000,
+        'Tarjeta Nu': 1160000,
+        'Viajes': 600000,
+        'Suscripciones': 12000,
+    };
+
+    function makeMonthExpenses(isApril) {
+        return expenseTemplate.map(t => ({
+            ...t,
+            amount: isApril ? (aprilAmounts[t.name] || 0) : 0
+        }));
+    }
+
+    function emptyMonth(monthIdx) {
         return {
             income: { Salario: 0, Comisiones: 0, Otros: 0 },
             savings: { Viajes: 0, General: 0, Emergencia: 0, Inversiones: 0 },
-            expenses: []
+            expenses: makeMonthExpenses(monthIdx === 3)
         };
     }
 
     function loadData() {
         const saved = localStorage.getItem('budgetDataV2');
-        if (saved) return JSON.parse(saved);
-        // Default: only April has data
+        if (saved) {
+            const d = JSON.parse(saved);
+            // Migration: for any month with empty expenses, load the template
+            for (let i = 0; i < 12; i++) {
+                if (!d.months[i]) d.months[i] = emptyMonth(i);
+                if (!d.months[i].expenses || d.months[i].expenses.length === 0) {
+                    d.months[i].expenses = makeMonthExpenses(i === 3);
+                }
+            }
+            return d;
+        }
         const months = {};
         for (let i = 0; i < 12; i++) {
-            months[i] = emptyMonth();
+            months[i] = emptyMonth(i);
         }
-        months[3].expenses = aprilExpenses;
         return { months };
     }
 
@@ -853,71 +890,137 @@
         setTimeout(() => t.classList.remove('show'), 2500);
     }
 
+    const YEAR_VIEW = 'year';
+    function isYearView() { return currentMonth === YEAR_VIEW; }
+
     // ====== MONTH SELECTOR ======
     function renderMonths() {
         const container = document.getElementById('monthSelector');
-        container.innerHTML = MONTHS.map((m, i) =>
+        let html = MONTHS.map((m, i) =>
             `<button class="month-btn ${i === currentMonth ? 'active' : ''}" onclick="selectMonth(${i})">${m}</button>`
         ).join('');
+        html += `<button class="month-btn month-year ${isYearView() ? 'active' : ''}" onclick="selectMonth('${YEAR_VIEW}')">📅 Año</button>`;
+        container.innerHTML = html;
     }
 
     function selectMonth(i) {
         currentMonth = i;
-        loadIncomeInputs();
-        loadSavingsInputs();
+        if (!isYearView()) {
+            loadIncomeInputs();
+            loadSavingsInputs();
+        }
+        // Toggle visibility of edit sections in year view
+        const incomeSection = document.querySelector('.income-section');
+        const savingsSection = document.querySelector('.savings-section');
+        const addBtn = document.querySelector('.btn-add-table');
+        if (isYearView()) {
+            incomeSection.style.display = 'none';
+            savingsSection.style.display = 'none';
+            if (addBtn) addBtn.style.display = 'none';
+        } else {
+            incomeSection.style.display = '';
+            savingsSection.style.display = '';
+            if (addBtn) addBtn.style.display = '';
+        }
         renderAll();
     }
 
     // ====== CALCULATIONS ======
     function getTotalIncome(monthIdx) {
-        const m = data.months[monthIdx !== undefined ? monthIdx : currentMonth];
+        const target = monthIdx !== undefined ? monthIdx : currentMonth;
+        if (target === YEAR_VIEW) {
+            let total = 0;
+            for (let i = 0; i < 12; i++) total += getTotalIncome(i);
+            return total;
+        }
+        const m = data.months[target];
         if (!m || !m.income) return 0;
         return Object.values(m.income).reduce((s, v) => s + v, 0);
     }
 
     function getTotalSavings(monthIdx) {
-        const m = data.months[monthIdx !== undefined ? monthIdx : currentMonth];
+        const target = monthIdx !== undefined ? monthIdx : currentMonth;
+        if (target === YEAR_VIEW) {
+            let total = 0;
+            for (let i = 0; i < 12; i++) total += getTotalSavings(i);
+            return total;
+        }
+        const m = data.months[target];
         if (!m || !m.savings) return 0;
-        return m.savings.Viajes || 0; // Only "Ahorro del mes" counts for Disponible
+        return m.savings.Viajes || 0;
     }
 
     function getGlobalSavings(monthIdx) {
-        const m = data.months[monthIdx !== undefined ? monthIdx : currentMonth];
+        const target = monthIdx !== undefined ? monthIdx : currentMonth;
+        if (target === YEAR_VIEW) {
+            let total = 0;
+            for (let i = 0; i < 12; i++) total += getGlobalSavings(i);
+            return total;
+        }
+        const m = data.months[target];
         if (!m || !m.savings) return 0;
         return Object.values(m.savings).reduce((s, v) => s + v, 0);
     }
 
     function getTotalMonthlyExpenses(monthIdx) {
-        const m = data.months[monthIdx !== undefined ? monthIdx : currentMonth];
+        const target = monthIdx !== undefined ? monthIdx : currentMonth;
+        if (target === YEAR_VIEW) {
+            let total = 0;
+            for (let i = 0; i < 12; i++) total += getTotalMonthlyExpenses(i);
+            return total;
+        }
+        const m = data.months[target];
         if (!m || !m.expenses) return 0;
         return m.expenses.reduce((s, e) => s + toMonthly(e.amount, e.freq), 0);
     }
 
     function getByCategory() {
         const cats = {};
-        cm().expenses.forEach(e => {
-            const m = toMonthly(e.amount, e.freq);
-            cats[e.category] = (cats[e.category] || 0) + m;
-        });
+        if (isYearView()) {
+            for (let i = 0; i < 12; i++) {
+                const mo = data.months[i];
+                if (!mo || !mo.expenses) continue;
+                mo.expenses.forEach(e => {
+                    const m = toMonthly(e.amount, e.freq);
+                    cats[e.category] = (cats[e.category] || 0) + m;
+                });
+            }
+        } else {
+            cm().expenses.forEach(e => {
+                const m = toMonthly(e.amount, e.freq);
+                cats[e.category] = (cats[e.category] || 0) + m;
+            });
+        }
         return cats;
     }
 
     function getEssentialSplit() {
         let essential = 0, nonEssential = 0;
-        cm().expenses.forEach(e => {
-            const m = toMonthly(e.amount, e.freq);
-            if (e.type === 'E') essential += m;
-            else nonEssential += m;
-        });
+        const accumulate = expenses => {
+            expenses.forEach(e => {
+                const m = toMonthly(e.amount, e.freq);
+                if (e.type === 'E') essential += m;
+                else nonEssential += m;
+            });
+        };
+        if (isYearView()) {
+            for (let i = 0; i < 12; i++) {
+                if (data.months[i] && data.months[i].expenses) accumulate(data.months[i].expenses);
+            }
+        } else {
+            accumulate(cm().expenses);
+        }
         return { essential, nonEssential };
     }
 
     // ====== SUMMARY CARDS ======
     function renderSummary() {
+        const year = isYearView();
+        const periodLabel = year ? 'Anual' : 'Mensual';
         const income = getTotalIncome();
         const savings = getTotalSavings();
         const expenses = getTotalMonthlyExpenses();
-        const disponible = income - savings - expenses; // what you actually have left
+        const disponible = income - savings - expenses;
         const { essential, nonEssential } = getEssentialSplit();
         const savingsRate = income > 0 ? ((savings / income) * 100) : 0;
         const totalOut = expenses + savings;
@@ -925,19 +1028,19 @@
         const container = document.getElementById('summaryCards');
         container.innerHTML = `
             <div class="summary-card">
-                <div class="label">Ingresos Mensuales</div>
+                <div class="label">Ingresos ${periodLabel}</div>
                 <div class="value positive">${fmt(income)}</div>
-                <div class="sub">Anual: ${fmt(income * 12)}</div>
+                <div class="sub">${year ? 'Promedio mensual: ' + fmt(income / 12) : 'Anual: ' + fmt(income * 12)}</div>
             </div>
             <div class="summary-card">
-                <div class="label">Ahorro Mensual</div>
+                <div class="label">Ahorro ${periodLabel}</div>
                 <div class="value" style="color: #00cec9">${fmt(savings)}</div>
-                <div class="sub">Anual: ${fmt(savings * 12)}</div>
+                <div class="sub">${year ? 'Promedio mensual: ' + fmt(savings / 12) : 'Anual: ' + fmt(savings * 12)}</div>
             </div>
             <div class="summary-card">
-                <div class="label">Gastos Mensuales</div>
+                <div class="label">Gastos ${periodLabel}</div>
                 <div class="value negative">${fmt(expenses)}</div>
-                <div class="sub">Anual: ${fmt(expenses * 12)}</div>
+                <div class="sub">${year ? 'Promedio mensual: ' + fmt(expenses / 12) : 'Anual: ' + fmt(expenses * 12)}</div>
             </div>
             <div class="summary-card">
                 <div class="label">Disponible (Ingreso − Ahorro Mensual − Gastos)</div>
@@ -1135,10 +1238,6 @@
     // ====== EXPENSE TABLE ======
     function renderTable() {
         const tbody = document.getElementById('expenseTableBody');
-        if (cm().expenses.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No hay gastos registrados para este mes. ¡Agrega uno con el botón +!</td></tr>';
-            return;
-        }
 
         const catIcons = {
             'Hogar': '🏠', 'Comida': '🍽️', 'Transporte': '🚗', 'Educación': '🎓',
@@ -1149,6 +1248,17 @@
             'Hogar': 'cat-hogar', 'Comida': 'cat-comida', 'Transporte': 'cat-transporte', 'Educación': 'cat-educacion',
             'Créditos/Deudas': 'cat-creditos', 'Entretenimiento': 'cat-entretenimiento', 'Familia': 'cat-familia'
         };
+
+        // Year view — aggregate across all months, read-only
+        if (isYearView()) {
+            renderYearTable(catIcons, catClass);
+            return;
+        }
+
+        if (cm().expenses.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No hay gastos registrados para este mes. ¡Agrega uno con el botón +!</td></tr>';
+            return;
+        }
 
         const categories = ['Hogar','Comida','Transporte','Educación','Créditos/Deudas','Entretenimiento','Familia'];
         const types = [{v:'E',l:'Esencial'},{v:'NE',l:'No Esencial'}];
@@ -1210,6 +1320,55 @@
         } else {
             html += nonEssentials.map(rowTpl).join('');
         }
+
+        tbody.innerHTML = html;
+    }
+
+    function renderYearTable(catIcons, catClass) {
+        const tbody = document.getElementById('expenseTableBody');
+        // Aggregate by expense name (using the April template as canonical list)
+        const aggregated = {};
+        for (let i = 0; i < 12; i++) {
+            const mo = data.months[i];
+            if (!mo || !mo.expenses) continue;
+            mo.expenses.forEach(e => {
+                const key = e.name + '|' + e.category + '|' + e.type;
+                if (!aggregated[key]) {
+                    aggregated[key] = { ...e, totalAnnual: 0, totalMonthlyEquiv: 0 };
+                }
+                // total actual money out over the year (amount is already the periodic amount, summed 12x)
+                aggregated[key].totalAnnual += e.amount;
+                aggregated[key].totalMonthlyEquiv += toMonthly(e.amount, e.freq);
+            });
+        }
+
+        const items = Object.values(aggregated);
+        const essentials = items.filter(e => e.type === 'E');
+        const nonEssentials = items.filter(e => e.type !== 'E');
+        const essentialTotal = essentials.reduce((s, e) => s + e.totalAnnual, 0);
+        const nonEssentialTotal = nonEssentials.reduce((s, e) => s + e.totalAnnual, 0);
+
+        const rowTpl = e => `
+            <tr>
+                <td>
+                    <div class="td-flex">
+                        <span class="category-icon ${catClass[e.category] || ''}">${catIcons[e.category] || '📦'}</span>
+                        ${e.name}
+                    </div>
+                </td>
+                <td>${e.category}</td>
+                <td><span class="badge ${e.type === 'E' ? 'badge-e' : 'badge-ne'}">${e.type === 'E' ? 'Esencial' : 'No Esencial'}</span></td>
+                <td>${e.freq}</td>
+                <td colspan="2" style="text-align: right; font-weight: 600;">${fmt(e.totalAnnual)}</td>
+                <td class="monthly-cell">${fmt(e.totalMonthlyEquiv)}</td>
+                <td></td>
+            </tr>`;
+
+        let html = '';
+        html += `<tr class="section-header section-essential"><td colspan="8">✅ Esenciales (Anual) <span class="section-total">${fmt(essentialTotal)} /año</span></td></tr>`;
+        html += essentials.length ? essentials.map(rowTpl).join('') : '<tr><td colspan="8" class="empty-section">Sin gastos esenciales</td></tr>';
+        html += `<tr class="section-header section-nonessential"><td colspan="8">✨ No Esenciales (Anual) <span class="section-total">${fmt(nonEssentialTotal)} /año</span></td></tr>`;
+        html += nonEssentials.length ? nonEssentials.map(rowTpl).join('') : '<tr><td colspan="8" class="empty-section">Sin gastos no esenciales</td></tr>';
 
         tbody.innerHTML = html;
     }
@@ -1375,7 +1534,7 @@
     // ====== RENDER ALL ======
     const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
     function renderAll() {
-        document.getElementById('headerSubtitle').textContent = MONTH_NAMES[currentMonth] + ' 2026';
+        document.getElementById('headerSubtitle').textContent = isYearView() ? 'Resumen Anual 2026' : MONTH_NAMES[currentMonth] + ' 2026';
         renderMonths();
         renderSummary();
         renderCharts();
