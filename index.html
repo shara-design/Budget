@@ -960,7 +960,7 @@
         }
         const m = data.months[target];
         if (!m || !m.savings) return 0;
-        return m.savings.Viajes || 0;
+        return (m.savings.Viajes || 0) + (m.savings.General || 0) + (m.savings.Emergencia || 0) + (m.savings.Inversiones || 0);
     }
 
     function getGlobalSavings(monthIdx) {
@@ -1319,7 +1319,7 @@
         let html = '';
 
         // Essentials section
-        html += `<tr class="section-header section-essential"><td colspan="8">✅ Esenciales <span class="section-total">${fmt(essentialTotal)} /mes</span></td></tr>`;
+        html += `<tr class="section-header section-essential"><td colspan="8">✅ Esenciales <span class="section-total" id="essentialSectionTotal">${fmt(essentialTotal)} /mes</span></td></tr>`;
         if (essentials.length === 0) {
             html += '<tr><td colspan="8" class="empty-section">Sin gastos esenciales</td></tr>';
         } else {
@@ -1327,7 +1327,7 @@
         }
 
         // Non-essentials section
-        html += `<tr class="section-header section-nonessential"><td colspan="8">✨ No Esenciales <span class="section-total">${fmt(nonEssentialTotal)} /mes</span></td></tr>`;
+        html += `<tr class="section-header section-nonessential"><td colspan="8">✨ No Esenciales <span class="section-total" id="nonEssentialSectionTotal">${fmt(nonEssentialTotal)} /mes</span></td></tr>`;
         if (nonEssentials.length === 0) {
             html += '<tr><td colspan="8" class="empty-section">Sin gastos no esenciales</td></tr>';
         } else {
@@ -1386,22 +1386,34 @@
         tbody.innerHTML = html;
     }
 
+    function updateSectionTotals() {
+        const essentialEl = document.getElementById('essentialSectionTotal');
+        const nonEssentialEl = document.getElementById('nonEssentialSectionTotal');
+        if (!essentialEl || !nonEssentialEl) return;
+        const { essential, nonEssential } = getEssentialSplit();
+        essentialEl.textContent = fmt(essential) + ' /mes';
+        nonEssentialEl.textContent = fmt(nonEssential) + ' /mes';
+    }
+
     function liveUpdateField(el) {
         const idx = parseInt(el.dataset.index);
         const field = el.dataset.field;
         const expense = cm().expenses[idx];
         expense[field] = el.value;
         saveData(data);
-        // If freq changed, recalc monthly cell
-        if (field === 'freq') {
-            document.getElementById('monthly-' + idx).textContent = fmt(toMonthly(expense.amount, expense.freq));
-        }
         renderSummary();
-        clearTimeout(expenseDebounce);
-        expenseDebounce = setTimeout(() => {
-            renderCharts();
-            renderTable(); // re-render to update icons/badges
-        }, 400);
+        if (field === 'type' || field === 'category') {
+            renderTable();
+            clearTimeout(expenseDebounce);
+            expenseDebounce = setTimeout(renderCharts, 300);
+        } else {
+            if (field === 'freq') {
+                document.getElementById('monthly-' + idx).textContent = fmt(toMonthly(expense.amount, expense.freq));
+            }
+            updateSectionTotals();
+            clearTimeout(expenseDebounce);
+            expenseDebounce = setTimeout(renderCharts, 300);
+        }
     }
 
     function addToMonto(el) {
@@ -1426,15 +1438,13 @@
         const newAmount = parseAmount(el.value);
         const expenses = cm().expenses;
         expenses[idx].amount = newAmount;
-        // Update monthly cell instantly
         document.getElementById('monthly-' + idx).textContent = fmt(toMonthly(newAmount, expenses[idx].freq));
         saveData(data);
         renderSummary();
+        updateSectionTotals();
         updateSavingsTotal();
         clearTimeout(expenseDebounce);
-        expenseDebounce = setTimeout(() => {
-            renderCharts();
-        }, 300);
+        expenseDebounce = setTimeout(renderCharts, 300);
     }
 
     // ====== INCOME ======
