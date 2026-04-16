@@ -960,7 +960,7 @@
         }
         const m = data.months[target];
         if (!m || !m.savings) return 0;
-        return (m.savings.Viajes || 0) + (m.savings.General || 0) + (m.savings.Emergencia || 0) + (m.savings.Inversiones || 0);
+        return m.savings.Viajes || 0;
     }
 
     function getGlobalSavings(monthIdx) {
