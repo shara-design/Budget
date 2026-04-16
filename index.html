@@ -49,6 +49,13 @@
             font-size: 0.95rem;
         }
 
+        .header .last-updated {
+            color: var(--text-dim);
+            font-size: 0.75rem;
+            margin-top: 6px;
+            opacity: 0.7;
+        }
+
         .month-selector {
             display: flex;
             justify-content: center;
@@ -616,6 +623,7 @@
 <div class="header">
     <h1>Presupuesto Personal</h1>
     <p id="headerSubtitle">Abril 2026</p>
+    <p class="last-updated" id="lastUpdated"></p>
 </div>
 
 <!-- Month Selector -->
@@ -1541,10 +1549,23 @@
         renderTable();
     }
 
+    // ====== LAST UPDATED ======
+    function renderLastUpdated() {
+        const d = new Date(document.lastModified);
+        const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+        const day = d.getDate();
+        const month = months[d.getMonth()];
+        const year = d.getFullYear();
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        document.getElementById('lastUpdated').textContent = `Última actualización: ${day} ${month} ${year}, ${hh}:${mm}`;
+    }
+
     // ====== INIT ======
     loadIncomeInputs();
     loadSavingsInputs();
     renderAll();
+    renderLastUpdated();
 
     // Close modal on overlay click
     document.getElementById('modal').addEventListener('click', function(e) {
