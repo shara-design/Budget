@@ -795,14 +795,16 @@
 
     const expenseTemplate = [
         { name: 'Arriendo', category: 'Hogar', type: 'E', freq: 'Mensual' },
+        { name: 'Servicios', category: 'Hogar', type: 'E', freq: 'Mensual' },
         { name: 'Teléfono', category: 'Hogar', type: 'E', freq: 'Mensual' },
         { name: 'Internet hogar', category: 'Hogar', type: 'E', freq: 'Bimensual' },
-        { name: 'Seguridad Social', category: 'Hogar', type: 'E', freq: 'Mensual' },
-        { name: 'Matrícula Isa', category: 'Educación', type: 'E', freq: 'Mensual' },
-        { name: 'Tarjeta Nu', category: 'Créditos/Deudas', type: 'E', freq: 'Mensual' },
-        { name: 'Tarjeta Bancolombia', category: 'Créditos/Deudas', type: 'E', freq: 'Mensual' },
+        { name: 'Salud/pensión', category: 'Hogar', type: 'E', freq: 'Mensual' },
+        { name: 'Matrícula Isa', category: 'Hogar', type: 'E', freq: 'Mensual' },
+        { name: 'Comida', category: 'Comida', type: 'E', freq: 'Mensual' },
         { name: 'Pasajes', category: 'Transporte', type: 'E', freq: 'Mensual' },
         { name: 'Taxi/Uber', category: 'Transporte', type: 'NE', freq: 'Mensual' },
+        { name: 'Tarjeta Nu', category: 'Créditos/Deudas', type: 'E', freq: 'Mensual' },
+        { name: 'Tarjeta Bancolombia', category: 'Créditos/Deudas', type: 'E', freq: 'Mensual' },
         { name: 'Viajes', category: 'Entretenimiento', type: 'NE', freq: 'Semestral' },
         { name: 'Suscripciones', category: 'Entretenimiento', type: 'NE', freq: 'Mensual' },
     ];
@@ -812,10 +814,14 @@
         'Teléfono': 45000,
         'Internet hogar': 18000,
         'Matrícula Isa': 275000,
+        'Comida': 388000,
+        'Taxi/Uber': 187000,
         'Tarjeta Nu': 1160000,
         'Viajes': 600000,
         'Suscripciones': 12000,
     };
+
+    const aprilIncome = { Salario: 6200000, Comisiones: 100000, Otros: 0 };
 
     function makeMonthExpenses(isApril) {
         return expenseTemplate.map(t => ({
@@ -826,17 +832,16 @@
 
     function emptyMonth(monthIdx) {
         return {
-            income: { Salario: 0, Comisiones: 0, Otros: 0 },
+            income: monthIdx === 3 ? { ...aprilIncome } : { Salario: 0, Comisiones: 0, Otros: 0 },
             savings: { Viajes: 0, General: 0, Emergencia: 0, Inversiones: 0 },
             expenses: makeMonthExpenses(monthIdx === 3)
         };
     }
 
     function loadData() {
-        const saved = localStorage.getItem('budgetDataV2');
+        const saved = localStorage.getItem('budgetDataV3');
         if (saved) {
             const d = JSON.parse(saved);
-            // Migration: for any month with empty expenses, load the template
             for (let i = 0; i < 12; i++) {
                 if (!d.months[i]) d.months[i] = emptyMonth(i);
                 if (!d.months[i].expenses || d.months[i].expenses.length === 0) {
@@ -853,7 +858,7 @@
     }
 
     function saveData(data) {
-        localStorage.setItem('budgetDataV2', JSON.stringify(data));
+        localStorage.setItem('budgetDataV3', JSON.stringify(data));
     }
 
     let data = loadData();
